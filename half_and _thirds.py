@@ -15,13 +15,13 @@ from scipy import stats
 import re
 
 if os.sep == '/':
-    directory = '/Users/emmabarash/Lab/data'
+    directory = '/Users/emmabarash/Lab/data/with_cues'
 else:
-    directory = r'C:\Users\Emma_PC\Documents\data'
+    directory = r'C:\Users\Emma_PC\Documents\data\with_cues'
 
 # directory = '/Users/emmabarash/Lab/blacklist'
 
-filelist = glob.glob(os.path.join(directory,'*','*.csv'))
+filelist = glob.glob(os.path.join(directory,'*.csv'))
 # filelist = glob.glob(os.path.join(directory,'*.csv'))
 
 finaldf = pd.DataFrame(columns = ['Time', 'Poke1', 'Poke2', 'Line1', 'Line2', 'Line3', 'Line4', 'Cue1',
@@ -71,6 +71,8 @@ for f in range(len(filelist)):
         
         return group, delivery_idx
     
+    group['Line1'] = group['Line1'].astype(bool)
+    group['Line2'] = group['Line2'].astype(bool)
     new_df, delivery_idx = parse_edges(df, ['Line1', 'Line2'])
     
     def create_edge_frame(copy):
@@ -118,20 +120,22 @@ for f in range(len(filelist)):
         data = copy[pokes]
         try: edges = data[data[poke].diff().fillna(False)]
         except: return None
-        edgeON = edges[edges[poke]==True].shift(1)
-        edgeON.iloc[0] = copy['Time'][0]
-        edgeON[poke].iloc[0] = True
-        edgeON.col = True
-        edgeON = edgeON.rename(columns={'Time':'TimeOn'})
-        edgeON = edgeON.drop(poke,axis=1)
-        edgeON.index = np.arange(len(edgeON))
-        
-        edgeOFF = edges[edges[poke]==False]
-        edgeOFF = edgeOFF.rename(columns={'Time':'TimeOff'})
-        edgeOFF = edgeOFF.drop(poke,axis=1)
-        edgeOFF.index = np.arange(len(edgeOFF))
-        test = pd.merge(edgeON,edgeOFF,left_index=True,right_index=True)
-        test['dt'] = test.TimeOff-test.TimeOn
+        if not edges.empty:
+            edgeON = edges[edges[poke]==True].shift(1)
+           # print('edges', edges,'edgeON', edgeON, "copy time", copy['Time'][0])
+            edgeON.iloc[0] = copy['Time'][0]
+            edgeON[poke].iloc[0] = True
+            edgeON.col = True
+            edgeON = edgeON.rename(columns={'Time':'TimeOn'})
+            edgeON = edgeON.drop(poke,axis=1)
+            edgeON.index = np.arange(len(edgeON))
+            
+            edgeOFF = edges[edges[poke]==False]
+            edgeOFF = edgeOFF.rename(columns={'Time':'TimeOff'})
+            edgeOFF = edgeOFF.drop(poke,axis=1)
+            edgeOFF.index = np.arange(len(edgeOFF))
+            test = pd.merge(edgeON,edgeOFF,left_index=True,right_index=True)
+            test['dt'] = test.TimeOff-test.TimeOn
         
         delivery_time = []
         for i in delivery_idx:
@@ -236,9 +240,9 @@ p2 = sns.lineplot(data = means, x = "Sessions", y = "Latencies", hue = "TasteID"
 # Put the legend out of the figure
 plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
-
-new_df.loc[(new_df['Date'] < '091222') & (new_df['TasteID'] == 'qhcl'), 'Concentration'] = 'qhcl_5mM'
-new_df.loc[(new_df['Date'] >= '091222') & (new_df['TasteID'] == 'qhcl'), 'Concentration'] = 'qhcl_10mM'
+#
+# new_df.loc[(new_df['Date'] < '091222') & (new_df['TasteID'] == 'qhcl'), 'Concentration'] = 'qhcl_5mM'
+new_df.loc[(new_df['TasteID'] == 'qhcl', 'Concentration')] = 'qhcl_10mM'
 new_df.loc[new_df['TasteID'] == 'suc', 'Concentration'] = 'suc_0.3M'
 
 # take out too low latencies
@@ -253,13 +257,25 @@ g = sns.relplot(data = new_df3, kind='line',
 g.fig.suptitle('Latency to acquire taste following cues', ha='center')
 g._legend.remove()
 g.set(title="", xlabel='Session')
-g.fig.legend(["5mM qhcl & 0.3M suc", '_Hidden',"10mM qhcl & 0.3M suc"],bbox_to_anchor=(0.55, -0.01))
+g.fig.legend(["10mM qhcl & 0.3M suc"],bbox_to_anchor=(0.55, -0.01))
 
 save_dir = '/Users/emmabarash/lab/sfn_figs/'
 # fig = g.get_figure()
 g.savefig(save_dir+'latency.svg', bbox_inches='tight')
 
 
+sns.barplot(deliveries_only['TasteID'], deliveries_only['Taste_Delivery'].cumsum())
+cmap = plt.get_cmap('tab10')
+t = sns.catplot(
+    data=new_df,
+    x = 'TasteID',
+    y='Taste_Delivery',
+    col='Sessions',
+    kind='bar',
+    hue = 'TasteID',
+    hue_order = ['suc', 'qhcl'],
+    # color=cmap(0)
+    )
 # take out too low latencies
 
 new_df = new_df.loc[new_df['Latencies'] > 0.2]
@@ -340,10 +356,10 @@ test = copy.groupby(['AnID','Sessions','Date','TasteID', 'Concentration']).agg(s
 
 # plot all deliveries for all sections
 fig, ax = plt.subplots(1,2, figsize=(17, 6))
-g = sns.lineplot(data = test.loc[test['AnID'] == 'eb11'],
-            x = 'Sessions', y = 'Taste_Delivery', hue = 'TasteID', ax=ax[0]).set(title='eb11')
-g = sns.lineplot(data = test.loc[test['AnID'] == 'eb12'],
-            x = 'Sessions', y = 'Taste_Delivery', hue = 'TasteID', ax=ax[1]).set(title='eb12')
+g = sns.lineplot(data = test.loc[test['AnID'] == 'eb13'],
+            x = 'Sessions', y = 'Taste_Delivery', hue = 'TasteID', ax=ax[0]).set(title='eb13')
+g = sns.lineplot(data = test.loc[test['AnID'] == 'eb14'],
+            x = 'Sessions', y = 'Taste_Delivery', hue = 'TasteID', ax=ax[1]).set(title='eb14')
 
 # combine animals
 g = sns.lineplot(data = test, x = 'Sessions', y = 'Taste_Delivery', hue = 'TasteID').set(title='Deliveries per Session, N=2')
@@ -355,11 +371,11 @@ g = sns.lineplot(data = test.loc[test['Date'] >= '091222'],
 # plot all deliveries for all sections
 fig, ax = plt.subplots(1,2, figsize=(17, 6))
 ax[0].tick_params(axis='x', rotation=45)
-g = sns.lineplot(data = test.loc[test['AnID'] == 'eb11'],
-            x = 'Date', y = 'Taste_Delivery', hue = 'TasteID', ax=ax[0]).set(title='eb11')
+g = sns.lineplot(data = test.loc[test['AnID'] == 'eb13'],
+            x = 'Date', y = 'Taste_Delivery', hue = 'TasteID', ax=ax[0]).set(title='eb13')
 ax[1].tick_params(axis='x', rotation=45)
-g = sns.lineplot(data = test.loc[test['AnID'] == 'eb12'],
-            x = 'Date', y = 'Taste_Delivery', hue = 'TasteID', ax=ax[1]).set(title='eb12')
+g = sns.lineplot(data = test.loc[test['AnID'] == 'eb14'],
+            x = 'Date', y = 'Taste_Delivery', hue = 'TasteID', ax=ax[1]).set(title='eb14')
 
 # plotting from 10mM qhcl
 fig, ax = plt.subplots(1,2, figsize=(17, 6))
