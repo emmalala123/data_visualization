@@ -15,9 +15,9 @@ from scipy import stats
 import re
 
 if os.sep == '/':
-    directory = '/Users/emmabarash/Lab/data/with_cues'
+    directory = '/Users/emmabarash/Lab/data/with_tastes'
 else:
-    directory = r'C:\Users\Emma_PC\Documents\data\with_cues'
+    directory = r'C:\Users\Emma_PC\Documents\data\with_tastes'
 
 # directory = '/Users/emmabarash/Lab/blacklist'
 
@@ -273,7 +273,7 @@ t = sns.catplot(
     col='Sessions',
     kind='bar',
     hue = 'TasteID',
-    hue_order = ['suc', 'qhcl'],
+    #hue_order = ['suc', 'qhcl'],
     # color=cmap(0)
     )
 # take out too low latencies
@@ -301,7 +301,7 @@ t = sns.catplot(
     y='Latencies',
     #col='Sessions',
     hue = 'TasteID',
-    #order = ['suc', 'qhcl']
+    hue_order = ['qhcl', 'suc'],
     # color=cmap(0)
     # height = 8,
     aspect = 12/7
@@ -316,12 +316,13 @@ t = sns.swarmplot(
     dodge= True,
     edgecolor = "white",
     linewidth = 1,
+    hue_order = ['qhcl', 'suc'],
     alpha = 0.5,
     )
 # fig = t.get_figure()
 # fig.savefig('t.png', dpi=600)
 ###
-t.fig.suptitle("All Animals Poke-to-Poke Latencies for Two Tastes", x=.80, fontsize=15)
+t.suptitle("All Animals Poke-to-Poke Latencies for Two Tastes", x=.80, fontsize=15)
 [plt.setp(ax.get_xticklabels(), rotation=45) for ax in t.axes.flat]
 t.fig.subplots_adjust(0.6,top=0.8, wspace=0.2)
 ##
@@ -344,10 +345,10 @@ copy.loc[copy['Time'] <= 1800, "Section"] = "First_Half"
 copy.loc[(copy['Time'] > 1800) & (copy['Time'] <= 3600), "Section"] = "Second_Half"
 
 # labeling concentrations
-copy['Concentration'] = None
-copy.loc[(copy['Sessions'] < 15) & (copy['TasteID'] == 'qhcl'), "Concentration"] = "5mM"
-copy.loc[(copy['Sessions'] >= 15) & (copy['TasteID'] == 'qhcl'), "Concentration"] = "10mM"
-copy.loc[copy['TasteID'] == 'suc', "Concentration"] = "0.3M"
+# copy['Concentration'] = None
+# copy.loc[(copy['Sessions'] < 15) & (copy['TasteID'] == 'qhcl'), "Concentration"] = "5mM"
+# copy.loc[(copy['Sessions'] >= 15) & (copy['TasteID'] == 'qhcl'), "Concentration"] = "10mM"
+# copy.loc[copy['TasteID'] == 'suc', "Concentration"] = "0.3M"
 
 # test re-sums the deliveries without 'Section'
 test = copy
@@ -364,7 +365,7 @@ g = sns.lineplot(data = test.loc[test['AnID'] == 'eb14'],
 # combine animals
 g = sns.lineplot(data = test, x = 'Sessions', y = 'Taste_Delivery', hue = 'TasteID').set(title='Deliveries per Session, N=2')
 g = sns.lineplot(data = test.loc[test['Date'] >= '091222'],
-            x = 'Sessions', y = 'Taste_Delivery', hue = 'TasteID').set(title='Deliveries per Session 10mM qhcl, N=2')
+            x = str(range(6)), y = 'Taste_Delivery', hue = 'TasteID').set(title='Deliveries per Session 10mM qhcl, N=2')
 
 
 
@@ -464,8 +465,11 @@ g = sns.boxenplot(data = copybara,
 g = sns.relplot(data = copybara.loc[copybara['Date'] >= '091222'],kind = 'line',
             x = 'Sessions', y = 'Taste_Delivery', row='AnID', col = 'Section', hue = 'TasteID', col_order=(['First_Third', 'Second_Third', 'Last_Third']))
 #bar
-g = sns.catplot(data = copybara.loc[copybara['Date'] >= '091222'],kind = "bar",
+g = sns.catplot(data = copybara,kind = "bar",
             x = 'Section', y = 'Taste_Delivery', col='AnID', hue = 'TasteID', order=['First_Third', "Second_Third", "Last_Third"]).set(title="Deliveries across all sessions, N=2")
+# Set the column names
+g.set_axis_labels("Section", "Taste Delivery")
+g.set_titles(col_template='AnID = {col_name}')
 #box
 g = sns.boxenplot(data = copybara.loc[copybara['Date'] >= '091222'],
             x = 'Section', y = 'Taste_Delivery', hue = 'TasteID', order=['First_Third', "Second_Third", "Last_Third"]).set(title="Deliveries across all sessions, N=2")
